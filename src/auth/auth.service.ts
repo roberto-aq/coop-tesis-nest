@@ -14,6 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './interfaces/jwt-patload.interface';
 import { RegisterDto } from './dto/register.dto';
 import { crearNombreUsuario } from './helpers';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -192,6 +193,74 @@ export class AuthService {
           token: this.getJwtToken({ id: Number(result.idPersona) }),
         },
       };
+    } catch (error) {
+      this.handleDBErrors(error);
+    }
+  }
+
+  async updatePassword(
+    usuarioId: number,
+    updatePasswordDto: UpdatePasswordDto,
+  ) {
+    try {
+      const usuario = await this.postgresPrisma.persona.findUnique({
+        where: { idPersona: usuarioId },
+        include: {
+          clave: {
+            where: { estado: true },
+            orderBy: { fecha: 'desc' },
+            take: 1,
+          },
+        },
+      });
+
+      if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+      if (usuario.clave.length === 0) {
+        throw new BadRequestException('Usuario no tiene clave activa');
+      }
+
+      const isPasswordValid = bcrypt.compareSync(
+        updatePasswordDto.currentPassword,
+        usuario.clave[0].clave,
+      );
+
+      if (!isPasswordValid) {
+        throw new BadRequestException('Contraseña actual incorrecta');
+      }
+
+      const hashedPassword = bcrypt.hashSync(updatePasswordDto.newPassword, 10);
+
+      await this.postgresPrisma.$transaction(async (prisma) => {
+        // Desactivar la clave actual
+        await prisma.clave.updateMany({
+          where: {
+            idPersona: usuarioId,
+            estado: true,
+          },
+          data: {
+            estado: false,
+          },
+        });
+
+        // Obtener el valor máximo de idClave
+        const maxIdClaveResult = await prisma.clave.aggregate({
+          _max: { idClave: true },
+        });
+        const maxIdClave = maxIdClaveResult._max.idClave;
+        const nuevaIdClave = (maxIdClave !== null ? Number(maxIdClave) : 0) + 1;
+
+        // Crear una nueva entrada de clave
+        await prisma.clave.create({
+          data: {
+            idClave: nuevaIdClave,
+            idPersona: usuarioId,
+            clave: hashedPassword,
+            estado: true,
+            fecha: new Date(),
+          },
+        });
+      });
     } catch (error) {
       this.handleDBErrors(error);
     }

@@ -6,8 +6,8 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PersonaRol } from '@prisma/client';
-import { Persona } from 'prisma/clients/postgres-client';
+
+import { Persona, PersonaRol } from 'prisma/clients/postgres-client';
 import { Observable } from 'rxjs';
 import { META_ROLES } from 'src/auth/decorators/role-protected.decorator';
 

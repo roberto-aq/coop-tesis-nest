@@ -22,3 +22,8 @@ docker compose up -d
 npm run push:mysql
 npm run push:postgres
 ```
+
+5. Ejecutar el servidor 
+```
+npm run start:dev
+```

@@ -1,0 +1,92 @@
+generator client {
+    provider = "prisma-client-js"
+    output   = "./clients/postgres-client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL_POSTGRESQL")
+}
+
+model Persona {
+    idPersona          BigInt       @id @default(autoincrement())
+    tipoIdentificacion Int
+    identificacion     String       @unique
+    nombreUnido        String       @db.VarChar(200)
+    apellido1          String?
+    apellido2          String?
+    nombres            String?
+    fechaNacimiento    DateTime?    @db.Date
+    direccion          String?
+    direccionTrabajo   String?
+    telefono           String?
+    sueldo             Decimal?     @db.Decimal(65, 30)
+    correo             String       @unique
+    usuario            String?
+    clave              Clave[]
+    personaRol         PersonaRol[]
+
+    @@unique([tipoIdentificacion, identificacion])
+    @@map("esq_datos_personales.tbl_persona")
+}
+
+model Clave {
+    idClave   BigInt   @id @default(autoincrement())
+    idPersona BigInt
+    clave     String   @db.VarChar(130)
+    fecha     DateTime
+    estado    Boolean  @default(true)
+    persona   Persona  @relation(fields: [idPersona], references: [idPersona])
+
+    @@map("esq_roles.tbl_clave")
+}
+
+model Menu {
+    idMenu      BigInt    @id @default(autoincrement())
+    codigo      BigInt?
+    descripcion String    @db.VarChar(100)
+    idPadre     Int?
+    ruta        String?   @db.VarChar(200)
+    orden       Int?
+    abrevia     String?   @db.VarChar(50)
+    estado      Boolean   @default(true)
+    menuRol     MenuRol[]
+
+    @@map("esq_roles.tbl_menu")
+}
+
+model Rol {
+    idRol       BigInt       @id @default(autoincrement())
+    descripcion String       @db.VarChar(100)
+    abrevia     String?      @db.VarChar(50)
+    orden       BigInt?
+    estado      Boolean      @default(true)
+    menuRol     MenuRol[]
+    personaRol  PersonaRol[]
+
+    @@map("esq_roles.tbl_rol")
+}
+
+model MenuRol {
+    idMenuRol BigInt   @id @default(autoincrement())
+    idRol     BigInt
+    idMenu    BigInt
+    fecha     DateTime
+    estado    Boolean  @default(true)
+    rol       Rol      @relation(fields: [idRol], references: [idRol])
+    menu      Menu     @relation(fields: [idMenu], references: [idMenu])
+
+    @@map("esq_roles.tbl_menu_rol")
+}
+
+model PersonaRol {
+    idPersonaRol BigInt    @id @default(autoincrement())
+    idPersona    BigInt?
+    idRol        BigInt?
+    fecha        DateTime? @db.Date
+    estado       Boolean   @default(true)
+    persona      Persona?  @relation(fields: [idPersona], references: [idPersona])
+    rol          Rol?      @relation(fields: [idRol], references: [idRol])
+
+    @@map("esq_roles.tbl_persona_rol")
+}

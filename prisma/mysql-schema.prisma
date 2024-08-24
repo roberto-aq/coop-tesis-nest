@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./clients/mysql-client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL_MYSQL")
+}
+
+enum EstadoCuenta {
+  ACTIVA
+  INACTIVA
+  BLOQUEADA
+}
+
+enum EstadoTransaccion {
+  COMPLETADA
+  PENDIENTE
+  FALLIDA
+}
+
+enum TipoProducto {
+  PRESTAMO
+  INVERSION
+  SEGURO
+}
+
+enum EstadoProducto {
+  ACTIVO
+  INACTIVO
+  FINALIZADO
+}
+
+model Persona {
+  secuencial         Int               @id @default(autoincrement())
+  // Tipo de identificacion de la persona
+  tipoIdentificacion String            @db.Char(2)
+  // Numero de identificacion de la persona
+  identificacion     String            @unique @db.VarChar(15)
+  // Nombre y apellidos completos de la persona
+  nombreUnido        String            @db.VarChar(200)
+  // El email de la persona
+  email              String            @db.VarChar(50)
+  // La locallidad de la persona
+  localidad          String            @db.Char(6)
+  // La calle principal de la
+  callePrincipal     String            @db.VarChar(100)
+  // La calle secundaria de la persona
+  calleSecundaria    String            @db.VarChar(100)
+  //  La ciudadela de la persona
+  ciudadela          String            @db.VarChar(100)
+  // El pais de origen de la persona codigo de pais
+  paisOrigen         String            @db.Char(2)
+  Cuenta             Cuenta[]
+  ProductoUsuario    ProductoUsuario[]
+
+  @@unique([tipoIdentificacion, identificacion], name: "Index_principal")
+  @@index([identificacion], map: "Index_identificacion")
+  @@map("persona")
+}
+
+model TipoCuenta {
+  secuencial  Int      @id @default(autoincrement())
+  nombre      String
+  descripcion String
+  cuentas     Cuenta[]
+
+  @@map("tipo_cuenta")
+}
+
+model Cuenta {
+  secuencial    Int          @id @default(autoincrement())
+  numeroCuenta  String       @unique @db.VarChar(20)
+  saldo         Float        @default(0)
+  estado        EstadoCuenta @default(ACTIVA)
+  fechaApertura DateTime     @default(now())
+
+  // Relaciones
+  persona              Persona     @relation(fields: [personaSecuencial], references: [secuencial])
+  personaSecuencial    Int
+  TipoCuenta           TipoCuenta? @relation(fields: [tipoCuentaSecuencial], references: [secuencial])
+  tipoCuentaSecuencial Int?
+
+  fechaCreacion        DateTime      @default(now())
+  fechaActualizacion   DateTime      @updatedAt
+  TransaccionesOrigen  Transaccion[] @relation("CuentaOrigen")
+  TransaccionesDestino Transaccion[] @relation("CuentaDestino")
+
+  @@map("cuenta")
+}
+
+model TipoTransaccion {
+  secuencial    Int           @id @default(autoincrement())
+  nombre        String
+  descripcion   String?
+  transacciones Transaccion[]
+
+  @@map("tipo_transaccion")
+}
+
+model Transaccion {
+  secuencial       Int               @id @default(autoincrement())
+  monto            Float
+  fechaTransaccion DateTime          @default(now())
+  estado           EstadoTransaccion @default(PENDIENTE)
+  descripcion      String?
+
+  // Relaciones
+  TipoTransaccion           TipoTransaccion? @relation(fields: [tipoTransaccionSecuencial], references: [secuencial])
+  tipoTransaccionSecuencial Int?
+  CuentaOrigen              Cuenta?          @relation("CuentaOrigen", fields: [cuentaOrigenId], references: [secuencial])
+  cuentaOrigenId            Int?
+  CuentaDestino             Cuenta?          @relation("CuentaDestino", fields: [cuentaDestinoId], references: [secuencial])
+  cuentaDestinoId           Int?
+}
+
+model Producto {
+  secuencial       Int               @id @default(autoincrement())
+  nombre           String
+  descripcion      String?
+  tipoProducto     TipoProducto
+  productosUsuario ProductoUsuario[]
+}
+
+model ProductoUsuario {
+  secuencial       Int            @id @default(autoincrement())
+  usuario          Persona        @relation(fields: [usuarioId], references: [secuencial])
+  usuarioId        Int
+  producto         Producto       @relation(fields: [productoId], references: [secuencial])
+  productoId       Int
+  fechaAdquisicion DateTime       @default(now())
+  estado           EstadoProducto @default(ACTIVO)
+  detalles         Json?
+}

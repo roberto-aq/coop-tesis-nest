@@ -1,0 +1,41 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./clients/mysql-client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL_MYSQL")
+}
+
+model Persona {
+  secuencial         Int    @id @default(autoincrement())
+  // Tipo de identificacion de la persona
+  tipoIdentificacion String @db.Char(2)
+  // Numero de identificacion de la persona
+  identificacion     String @db.VarChar(15)
+  // Nombre y apellidos completos de la persona
+  nombreUnido        String @db.VarChar(200)
+  // El email de la persona
+  email              String @db.VarChar(50)
+  // La locallidad de la persona
+  localidad          String @db.Char(6)
+  // La calle principal de la
+  callePrincipal     String @db.VarChar(100)
+  // La calle secundaria de la persona
+  calleSecundaria    String @db.VarChar(100)
+  //  La ciudadela de la persona
+  ciudadela          String @db.VarChar(100)
+  // El pais de origen de la persona codigo de pais
+  paisOrigen         String @db.Char(2)
+
+  @@unique([tipoIdentificacion, identificacion], name: "Index_principal")
+  @@index([identificacion], map: "Index_identificacion")
+  @@map("persona")
+}
